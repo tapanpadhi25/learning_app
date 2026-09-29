@@ -16,39 +16,43 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.constraintlayout.compose.Visibility
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    viewModel: LoginViewModel = viewModel()
+    loginViewModel: LoginViewModel = viewModel()
 ) {
 
-    val uiState by viewModel.uiState.collectAsState()
-
-    if (uiState.isLoginSuccess) {
-        onLoginSuccess()
-    }
+    val uiState by loginViewModel.uiState.collectAsState()
 
     var passwordVisible by remember {
         mutableStateOf(false)
+    }
+
+    // Navigate after successful login
+    LaunchedEffect(uiState.isLoginSuccess) {
+
+        if (uiState.isLoginSuccess) {
+            onLoginSuccess()
+        }
     }
 
     Scaffold { innerPadding ->
@@ -65,23 +69,19 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center
         ) {
 
+            // Login title
             Text(
                 text = "Login",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
-
             )
-
-
-            Spacer(
-                modifier = Modifier.height(32.dp)
-            )
+            Spacer(modifier = Modifier.height(32.dp))
 
             OutlinedTextField(
                 value = uiState.email,
 
                 onValueChange = {
-                    viewModel.onEmailChange(it)
+                    loginViewModel.onEmailChange(it)
                 },
 
                 modifier = Modifier.fillMaxWidth(),
@@ -105,11 +105,12 @@ fun LoginScreen(
                 modifier = Modifier.height(16.dp)
             )
 
+            // Password
             OutlinedTextField(
                 value = uiState.password,
 
                 onValueChange = {
-                    viewModel.onPasswordChange(it)
+                    loginViewModel.onPasswordChange(it)
                 },
 
                 modifier = Modifier.fillMaxWidth(),
@@ -162,10 +163,7 @@ fun LoginScreen(
                 }
             )
 
-            Spacer(
-                modifier = Modifier.height(24.dp)
-            )
-
+            Spacer(modifier = Modifier.height(24.dp))
             uiState.errorMessage?.let { error ->
 
                 Text(
@@ -179,9 +177,10 @@ fun LoginScreen(
                 )
             }
 
+            // Login button
             Button(
                 onClick = {
-                    viewModel.login()
+                    loginViewModel.login()
                 },
 
                 modifier = Modifier
@@ -194,9 +193,7 @@ fun LoginScreen(
                 if (uiState.isLoading) {
 
                     CircularProgressIndicator(
-                        modifier = Modifier
-                            .height(22.dp),
-
+                        modifier = Modifier.height(22.dp),
                         strokeWidth = 2.dp
                     )
 
@@ -212,6 +209,7 @@ fun LoginScreen(
                 modifier = Modifier.height(16.dp)
             )
 
+            // Demo credentials
             Text(
                 text = "Demo: test@gmail.com / 123456",
                 style = MaterialTheme.typography.bodySmall
