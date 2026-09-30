@@ -1,10 +1,11 @@
 package com.example.learning_app.presentation.dashboard
 
-import Course
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,100 +15,61 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.learning_app.R
+import com.example.learning_app.data.model.Course
+import com.example.learning_app.ui.components.AppTopBar
+import com.example.learning_app.ui.theme.AppStyle
 
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    onCourseClick: (Course) -> Unit,
-    dashboardViewModel: DashboardViewModel = viewModel()
+    onCourseClick: (Int) -> Unit,
+    viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory)
 ) {
-
-    val uiState by dashboardViewModel
-        .uiState
-        .collectAsState()
-
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
-
-        topBar = {
-
-            TopAppBar(
-                title = {
-                    Text("Learning Dashboard")
-                }
-            )
-        }
-
+        topBar = { AppTopBar(title = stringResource(R.string.title_dashboard)) }
     ) { innerPadding ->
-
+        val modifier = Modifier.padding(innerPadding)
+        val errorMessage = uiState.errorMessage
         when {
+            uiState.courses.isNotEmpty() -> CourseList(
+                courses = uiState.courses,
+                errorMessage = errorMessage,
+                onRetry = viewModel::refresh,
+                onCourseClick = onCourseClick,
+                modifier = modifier
+            )
 
-            // Loading
-            uiState.isLoading -> {
+            uiState.isLoading -> LoadingContent(modifier)
 
-                LoadingContent(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                )
-            }
+            errorMessage != null -> MessageContent(
+                title = stringResource(errorMessage),
+                message = stringResource(R.string.dashboard_error_message),
+                onRetry = viewModel::refresh,
+                modifier = modifier
+            )
 
-
-            // Error
-            uiState.errorMessage != null -> {
-
-                ErrorContent(
-                    message =
-                    uiState.errorMessage!!,
-
-                    onRetry = {
-                        dashboardViewModel
-                            .loadCourses()
-                    },
-
-                    modifier = Modifier
-                        .padding(innerPadding)
-                )
-            }
-
-
-            // Empty
-            uiState.courses.isEmpty() -> {
-
-                EmptyContent(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                )
-            }
-
-
-            // Success
-            else -> {
-
-                CourseList(
-                    courses = uiState.courses,
-
-                    onCourseClick = onCourseClick,
-
-                    modifier = Modifier
-                        .padding(innerPadding)
-                )
-            }
+            else -> MessageContent(
+                title = stringResource(R.string.dashboard_empty_title),
+                message = stringResource(R.string.dashboard_empty_message),
+                onRetry = viewModel::refresh,
+                modifier = modifier
+            )
         }
     }
 }
@@ -115,308 +77,115 @@ fun DashboardScreen(
 @Composable
 private fun CourseList(
     courses: List<Course>,
-    onCourseClick: (Course) -> Unit,
+    @StringRes errorMessage: Int?,
+    onRetry: () -> Unit,
+    onCourseClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-
     LazyColumn(
-
         modifier = modifier.fillMaxSize(),
-
-        contentPadding = PaddingValues(
-            horizontal = 16.dp,
-            vertical = 16.dp
-        ),
-
-        verticalArrangement =
-        Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(AppStyle.ScreenPadding),
+        verticalArrangement = Arrangement.spacedBy(AppStyle.ItemSpacing)
     ) {
-
-        item {
-
-            Text(
-                text = "My Courses",
-                style =
-                MaterialTheme.typography
-                    .headlineSmall,
-                fontWeight =
-                FontWeight.Bold
-            )
-
-            Spacer(
-                modifier =
-                Modifier.height(4.dp)
-            )
-
-            Text(
-                text =
-                "Continue learning where you left off.",
-                style =
-                MaterialTheme.typography
-                    .bodyMedium
-            )
+        if (errorMessage != null) {
+            item { OfflineBanner(message = stringResource(errorMessage), onRetry = onRetry) }
         }
 
+        item {
+            Text(text = stringResource(R.string.dashboard_header), style = AppStyle.HeaderTitle)
+        }
 
-        items(
-            items = courses,
-            key = { it.id }
-        ) { course ->
-
-            CourseCard(
-                course = course,
-
-                onContinue = {
-                    onCourseClick(course)
-                }
-            )
+        items(items = courses, key = { it.id }) { course ->
+            CourseCard(course = course, onContinue = { onCourseClick(course.id) })
         }
     }
 }
 
 @Composable
-private fun CourseCard(
-    course: Course,
-    onContinue: () -> Unit
-) {
-
+private fun OfflineBanner(message: String, onRetry: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        )
     ) {
-
-        Column(
+        Row(
             modifier = Modifier
-                .padding(16.dp)
+                .fillMaxWidth()
+                .padding(start = AppStyle.CardPadding, end = AppStyle.SpaceMedium),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-
             Text(
-                text = course.title,
-
-                style =
-                MaterialTheme.typography
-                    .titleLarge,
-
-                fontWeight =
-                FontWeight.Bold
+                text = stringResource(R.string.dashboard_offline_banner, message),
+                style = AppStyle.Body,
+                modifier = Modifier.weight(1f)
             )
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
+        }
+    }
+}
 
-
-            Spacer(
-                modifier =
-                Modifier.height(6.dp)
-            )
-
-
+@Composable
+private fun CourseCard(course: Course, onContinue: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(AppStyle.CardPadding)) {
+            Text(text = course.title, style = AppStyle.CardTitle)
+            Spacer(modifier = Modifier.height(AppStyle.SpaceSmall))
             Text(
-                text =
-                "Instructor: ${course.instructor}",
-
-                style =
-                MaterialTheme.typography
-                    .bodyMedium
+                text = stringResource(R.string.course_instructor, course.instructor),
+                style = AppStyle.Body
             )
-
-
-            Spacer(
-                modifier =
-                Modifier.height(16.dp)
-            )
-
-
+            Spacer(modifier = Modifier.height(AppStyle.SpaceLarge))
             Text(
-                text =
-                "Progress: ${course.progress}%",
-
-                fontWeight =
-                FontWeight.Medium
+                text = stringResource(R.string.course_progress, course.progress),
+                style = AppStyle.BodyBold
             )
-
-
-            Spacer(
-                modifier =
-                Modifier.height(8.dp)
-            )
-
-
+            Spacer(modifier = Modifier.height(AppStyle.SpaceMedium))
             LinearProgressIndicator(
-
-                progress = {
-                    course.progress / 100f
-                },
-
-                modifier =
-                Modifier.fillMaxWidth()
+                progress = { course.progress / 100f },
+                modifier = Modifier.fillMaxWidth()
             )
-
-
-            Spacer(
-                modifier =
-                Modifier.height(12.dp)
-            )
-
-
+            Spacer(modifier = Modifier.height(AppStyle.SpaceLarge))
             Text(
-                text =
-                "${course.lessons} Lessons",
-
-                style =
-                MaterialTheme.typography
-                    .bodyMedium
+                text = stringResource(R.string.course_lessons_count, course.totalLessons),
+                style = AppStyle.Body
             )
-
-
-            Spacer(
-                modifier =
-                Modifier.height(12.dp)
-            )
-
-
-            Button(
-
-                onClick = onContinue,
-
-                modifier =
-                Modifier.fillMaxWidth()
-            ) {
-
-                Text("Continue")
+            Spacer(modifier = Modifier.height(AppStyle.SpaceLarge))
+            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.action_continue))
             }
         }
     }
 }
 
 @Composable
-private fun LoadingContent(
-    modifier: Modifier = Modifier
-) {
-
-    Box(
-        modifier = modifier.fillMaxSize(),
-
-        contentAlignment =
-        Alignment.Center
-    ) {
-
-        Column(
-            horizontalAlignment =
-            Alignment.CenterHorizontally
-        ) {
-
+private fun LoadingContent(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
-
-            Spacer(
-                modifier =
-                Modifier.height(12.dp)
-            )
-
-            Text(
-                text = "Loading courses..."
-            )
+            Spacer(modifier = Modifier.height(AppStyle.SpaceLarge))
+            Text(text = stringResource(R.string.dashboard_loading), style = AppStyle.Body)
         }
     }
 }
 
 @Composable
-private fun EmptyContent(
-    modifier: Modifier = Modifier
-) {
-
-    Box(
-        modifier = modifier.fillMaxSize(),
-
-        contentAlignment =
-        Alignment.Center
-    ) {
-
-        Column(
-            horizontalAlignment =
-            Alignment.CenterHorizontally
-        ) {
-
-            Text(
-                text = "No courses available",
-
-                style =
-                MaterialTheme.typography
-                    .titleMedium,
-
-                fontWeight =
-                FontWeight.Bold
-            )
-
-            Spacer(
-                modifier =
-                Modifier.height(8.dp)
-            )
-
-            Text(
-                text =
-                "There are no courses to display."
-            )
-        }
-    }
-}
-
-@Composable
-private fun ErrorContent(
+private fun MessageContent(
+    title: String,
     message: String,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-
-    Box(
-        modifier = modifier.fillMaxSize(),
-
-        contentAlignment =
-        Alignment.Center
-    ) {
-
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
-
-            modifier =
-            Modifier.padding(24.dp),
-
-            horizontalAlignment =
-            Alignment.CenterHorizontally
+            modifier = Modifier.padding(AppStyle.FormPadding),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Text(
-                text = message,
-
-                style =
-                MaterialTheme.typography
-                    .titleMedium,
-
-                fontWeight =
-                FontWeight.Bold
-            )
-
-
-            Spacer(
-                modifier =
-                Modifier.height(8.dp)
-            )
-
-
-            Text(
-                text =
-                "Something went wrong while loading your courses."
-            )
-
-
-            Spacer(
-                modifier =
-                Modifier.height(16.dp)
-            )
-
-
-            Button(
-                onClick = onRetry
-            ) {
-
-                Text("Retry")
-            }
+            Text(text = title, style = AppStyle.SectionTitle)
+            Spacer(modifier = Modifier.height(AppStyle.SpaceMedium))
+            Text(text = message, style = AppStyle.Body)
+            Spacer(modifier = Modifier.height(AppStyle.SpaceLarge))
+            Button(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
         }
     }
 }

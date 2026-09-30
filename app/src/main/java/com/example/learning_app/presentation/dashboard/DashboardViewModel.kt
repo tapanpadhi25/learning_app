@@ -1,82 +1,67 @@
 package com.example.learning_app.presentation.dashboard
 
-import Course
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.learning_app.LearningApp
+import com.example.learning_app.R
+import com.example.learning_app.data.model.Course
+import com.example.learning_app.data.repository.CourseRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.IOException
 
-class DashboardViewModel : ViewModel() {
+data class DashboardUiState(
+    val isLoading: Boolean = true,
+    val courses: List<Course> = emptyList(),
+    @StringRes val errorMessage: Int? = null
+)
 
-    private val _uiState =
-        MutableStateFlow(DashboardUiState())
+class DashboardViewModel(private val repository: CourseRepository) : ViewModel() {
 
-    val uiState: StateFlow<DashboardUiState> =
-        _uiState.asStateFlow()
+    private val isRefreshing = MutableStateFlow(false)
+    private val refreshError = MutableStateFlow<Int?>(null)
 
+    val uiState: StateFlow<DashboardUiState> = combine(
+        repository.observeCourses(),
+        isRefreshing,
+        refreshError
+    ) { courses, refreshing, error ->
+        DashboardUiState(isLoading = refreshing, courses = courses, errorMessage = error)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
 
     init {
-        loadCourses()
+        refresh()
     }
 
-
-    fun loadCourses() {
-
+    fun refresh() {
+        if (isRefreshing.value) return
         viewModelScope.launch {
+            isRefreshing.value = true
+            refreshError.value = null
+            repository.refreshCourses().onFailure { error ->
+                refreshError.value = if (error is IOException) {
+                    R.string.error_no_internet
+                } else {
+                    R.string.error_load_courses
+                }
+            }
+            isRefreshing.value = false
+        }
+    }
 
-            _uiState.value = DashboardUiState(
-                isLoading = true
-            )
-
-            try {
-
-                // Simulate API call
-                delay(1000)
-
-                val courses = listOf(
-
-                    Course(
-                        id = 1,
-                        title = "Python Programming",
-                        instructor = "John Smith",
-                        progress = 65,
-                        lessons = 20
-                    ),
-
-                    Course(
-                        id = 2,
-                        title = "Generative AI",
-                        instructor = "Sarah Williams",
-                        progress = 40,
-                        lessons = 16
-                    ),
-
-                    Course(
-                        id = 3,
-                        title = "Full Stack Development",
-                        instructor = "David Brown",
-                        progress = 25,
-                        lessons = 28
-                    )
-                )
-
-                _uiState.value =
-                    DashboardUiState(
-                        isLoading = false,
-                        courses = courses
-                    )
-
-            } catch (e: Exception) {
-
-                _uiState.value =
-                    DashboardUiState(
-                        isLoading = false,
-                        errorMessage =
-                        "Unable to load courses"
-                    )
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                val app = this[APPLICATION_KEY] as LearningApp
+                DashboardViewModel(app.container.courseRepository)
             }
         }
     }

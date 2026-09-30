@@ -1,3 +1,43 @@
 <resources>
-    <string name="app_name">learning_app</string>
+    <string name="app_name">Learning App</string>
+
+    <string name="title_login">Login</string>
+    <string name="title_dashboard">Learning Dashboard</string>
+    <string name="title_course_details">Course Details</string>
+
+    <string name="label_email">Email</string>
+    <string name="label_password">Password</string>
+    <string name="action_login">Login</string>
+    <string name="action_show_password">Show password</string>
+    <string name="action_hide_password">Hide password</string>
+    <string name="login_demo_credentials">Demo: test@gmail.com / 123456</string>
+
+    <string name="error_email_required">Email is required</string>
+    <string name="error_email_invalid">Enter a valid email</string>
+    <string name="error_password_required">Password is required</string>
+    <string name="error_password_short">Password must contain at least 6 characters</string>
+    <string name="error_invalid_credentials">Invalid email or password</string>
+
+    <string name="dashboard_header">My Courses</string>
+    <string name="dashboard_loading">Loading courses…</string>
+    <string name="dashboard_empty_title">No courses available</string>
+    <string name="dashboard_empty_message">There are no courses to display.</string>
+    <string name="dashboard_error_message">Something went wrong while loading your courses.</string>
+    <string name="dashboard_offline_banner">%1$s. Showing saved courses.</string>
+    <string name="error_no_internet">No internet connection</string>
+    <string name="error_load_courses">Unable to load courses</string>
+
+    <string name="course_instructor">Instructor: %1$s</string>
+    <string name="course_progress">Progress: %1$d%%</string>
+    <string name="course_lessons_count">%1$d Lessons</string>
+    <string name="course_lessons_completed">%1$d of %2$d lessons completed</string>
+    <string name="course_lessons_header">Lessons</string>
+    <string name="course_not_found">Course not found</string>
+
+    <string name="lesson_completed">Completed</string>
+    <string name="lesson_pending">Pending</string>
+
+    <string name="action_continue">Continue</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_back">Back</string>
 </resources>

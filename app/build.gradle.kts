@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -11,13 +12,8 @@ android {
         applicationId = "com.example.learning_app"
         minSdk = 24
         targetSdk = 35
-
         versionCode = 1
         versionName = "1.0"
-
-        testInstrumentationRunner =
-            "androidx.test.runner.AndroidJUnitRunner"
-
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -26,11 +22,8 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-
             proguardFiles(
-                getDefaultProguardFile(
-                    "proguard-android-optimize.txt"
-                ),
+                getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
@@ -60,44 +53,30 @@ android {
     }
 }
 
-dependencies {
+ksp {
+    arg("room.generateKotlin", "true")
+}
 
-    // Android Core
+dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
-    // Compose BOM
     implementation(platform(libs.androidx.compose.bom))
-
-    // Jetpack Compose
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-
-    // Material 3
     implementation(libs.androidx.material3)
-
-    // Material Icons
     implementation(libs.androidx.material.icons.extended)
-
-    // Navigation
     implementation(libs.androidx.navigation.compose)
-
-    // ViewModel
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-//    implementation(libs.androidx.navigation.compose.android)
-
-    // Unit Tests
-    testImplementation(libs.junit)
-
-    // Android Tests
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-
-    // Debug
     debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
